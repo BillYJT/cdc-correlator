@@ -250,12 +250,15 @@ int corr_est_impl::work(int noutput_items,
         }
         detection /= static_cast<float>(noutput_items);
         //GR_LOG_INFO (d_logger, boost::format("Energy %2%" ) %detection);
+        //EXPERIMENTAL
+        d_avgEnergy = 0.9*d_avgEnergy + 0.1*detection;
+        detection = d_avgEnergy;
         detection *= d_pfa;
     }
 
     int isps = (int)(d_sps + 0.5f);
     int i = 0;
-    while (i < noutput_items) {
+    while (i < noutput_items || !d_peakDetected) { //EXPERIMENTAL IMPLEMENTATION
         float corr_mag;
         switch (d_threshold_method) {
         case THRESHOLD_DYNAMIC:
@@ -272,12 +275,11 @@ int corr_est_impl::work(int noutput_items,
             break;
         }
 
-        //EXPERIMENTAL IMPLEMENTATION
-        if (corr_mag <= d_thresh || d_peakDetected) {
+        
+        if (corr_mag <= d_thresh) {
             i++;
             continue;
         }
-        d_peakDetected = true;
 
         // Go to (just past) the current correlator output peak
         while ((i < (noutput_items - 1)) && (d_corr_mag[i] < d_corr_mag[i + 1])) {
@@ -326,14 +328,15 @@ int corr_est_impl::work(int noutput_items,
         volk_32fc_index_max_32u_manual(&maxi, (gr_complex*)in, noutput_items, "generic");
         
         //EXPERIMENTAL IMPLEMENTATION
-        if (std::abs(in[maxi]) != 0){
+        if (std::abs(in[maxi]) >= 0.00001){
             d_scale = 1 / std::abs(in[maxi]);
         }
         else{
-            GR_LOG_WARN (d_logger, "division by zero");
-            d_scale = 1.0f;
+            GR_LOG_WARN (d_logger, "division by zero, ignore this peak");
+            continue;
+            //d_scale = 1.0f;
         }
-        
+        d_peakDetected = true; //Passed all checks, set the flag
 
         // Calculate the phase offset of the incoming signal.
         //

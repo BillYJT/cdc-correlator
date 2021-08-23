@@ -45,6 +45,9 @@ namespace gr {
       float d_scale;
       float d_pfa; // probability of false alarm
 
+      //EXPERIMENTAL 
+      float d_avgEnergy {10.0};
+
       bool d_peakDetected; //EXPERIMENTAL IMPLEMENTATION, 
                            //flag set to 1 when peak detected
 
